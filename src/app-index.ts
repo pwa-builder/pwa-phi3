@@ -9,8 +9,9 @@ import { router } from './router';
 import { setTheme } from '@fluentui/web-components';
 import { webLightTheme, webDarkTheme } from '@fluentui/tokens';
 
-const themeCheck = window.matchMedia('(prefers-color-scheme: dark)');
-setTheme(themeCheck.matches ? webDarkTheme : webLightTheme);
+const themeCheck = window.matchMedia('(prefers-color-scheme: dark)').matches ? "dark" : "light";
+console.log("themeCheck", themeCheck)
+setTheme(themeCheck === "dark" ? webDarkTheme : webLightTheme);
 
 @customElement('app-index')
 export class AppIndex extends LitElement {

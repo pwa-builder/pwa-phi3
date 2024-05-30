@@ -5,7 +5,7 @@ import { resolveRouterPath } from '../router';
 import '@shoelace-style/shoelace/dist/components/button/button.js';
 @customElement('app-header')
 export class AppHeader extends LitElement {
-  @property({ type: String }) title = 'PWA Whisper Starter';
+  @property({ type: String }) title = 'Phi3 PWA';
 
   @property({ type: Boolean}) enableBack: boolean = false;
 
@@ -32,6 +32,7 @@ export class AppHeader extends LitElement {
       margin-bottom: 0;
       font-size: 12px;
       font-weight: bold;
+      color: black;
     }
 
     nav a {
@@ -45,9 +46,9 @@ export class AppHeader extends LitElement {
       gap: 8px;
     }
 
-    @media(prefers-color-scheme: light) {
+    @media(prefers-color-scheme: dark) {
       header h1 {
-        color: black;
+        color: white;
       }
     }
   `;

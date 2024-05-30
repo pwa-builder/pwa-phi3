@@ -3,9 +3,12 @@ import { property, state, customElement } from 'lit/decorators.js';
 
 import '@fluentui/web-components/button.js';
 import '@fluentui/web-components/text-input.js';
+import '@fluentui/web-components/text.js';
 import '@fluentui/web-components/label.js';
 
 import { styles } from '../styles/shared-styles';
+
+import {classMap} from 'lit/directives/class-map.js';
 
 @customElement('app-home')
 export class AppHome extends LitElement {
@@ -17,7 +20,7 @@ export class AppHome extends LitElement {
   @state() previousMessages: any[] = [];
   @state() loaded: boolean = false;
 
-  query: string = "";
+  @state() query: string | undefined = undefined;
 
   static styles = [
     styles,
@@ -26,6 +29,9 @@ export class AppHome extends LitElement {
         display: flex;
         flex-direction: column;
         gap: 8px;
+
+        height: -webkit-fill-available;
+        justify-content: space-between;
       }
 
       fluent-button svg {
@@ -34,10 +40,42 @@ export class AppHome extends LitElement {
       }
 
       fluent-text {
-        min-height: 50vh;
-        background: #ffffff12;
         border-radius: 4px;
         padding: 8px;
+        display: block;
+        color: white;
+        background: #292929;
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+      }
+
+      fluent-text-input {
+        flex: 1;
+        max-width: unset;
+      }
+
+      fluent-text-input::part(root) {
+        background: #292929;
+      }
+
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        gap: 8px;
+        flex-direction: column;
+        max-height: -webkit-fill-available;
+      }
+
+      li {
+        margin-right: 50vw;
+      }
+
+      li.assistant {
+        margin-left: 50vw;
+        margin-right: unset;
       }
 
       #actions-menu {
@@ -81,9 +119,21 @@ export class AppHome extends LitElement {
         flex-direction: column;
       }
 
+      #toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 28px;
+      }
+
       @media(prefers-color-scheme: light) {
         fluent-text {
-          background: #f0f0f0;
+          background: white;
+          color: black;
+        }
+
+        fluent-text-input::part(root) {
+          background: white;
         }
       }
 
@@ -107,12 +157,51 @@ export class AppHome extends LitElement {
 
       this.loaded = true;
     }
+
+    //set up to listen for the enter button
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        if (this.query && this.query.length > 0) {
+          this.sendMessage();
+        }
+      }
+    });
   }
 
   async sendMessage() {
+    this.previousMessages = [
+      ...this.previousMessages,
+      {
+        type: "user",
+        content: this.query || ""
+      }
+    ];
+
+    // make copy to use below
+    let origQuery = this.query
+
+    // reset this.query
+    this.query = undefined;
+
+
+    let completeMessage = "";
+
+    this.previousMessages = [
+      ...this.previousMessages,
+      {
+        type: "assistant",
+        content: ""
+      }
+    ];
+
     const { Query } = await import('../services/phi');
-    Query(false, this.query, (message: string) => {
+    await Query(false, origQuery, (message: string) => {
       console.log("Message received: ", message);
+      completeMessage = message;
+
+      // update last previous message.content
+      this.previousMessages[this.previousMessages.length - 1].content = completeMessage;
+      this.requestUpdate();
     });
   }
 
@@ -139,15 +228,17 @@ export class AppHome extends LitElement {
       <main>
 
         <ul>
-          ${
-            this.previousMessages.length > 0 ?
-            this.previousMessages.map((message: string) => html``) : null
+          ${this.previousMessages.length > 0 ?
+            this.previousMessages.map((message) => html`
+              <li class=${classMap({assistant: message.type === "assistant"})}>
+                <fluent-text>${message.content}</fluent-text>
+              </li>
+            `) : null
           }
         </ul>
 
         <div id="toolbar">
-          <fluent-text-input @change="${($event: any) => this.handleInputChange($event.target.value)}" ?disabled=${this.loaded === false}>
-            <fluent-label>Why is the sky blue?</fluent-label>
+          <fluent-text-input appearance="filled-lighter" @change="${($event: any) => this.handleInputChange($event.target.value)}" .value="${this.query || ""}" ?disabled=${this.loaded === false}>
           </fluent-text-input>
 
           <fluent-button @click="${this.sendMessage}" ?disabled=${this.loaded === false} appearance="primary">
