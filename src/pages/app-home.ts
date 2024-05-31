@@ -8,7 +8,9 @@ import '@fluentui/web-components/label.js';
 
 import { styles } from '../styles/shared-styles';
 
-import {classMap} from 'lit/directives/class-map.js';
+import { classMap } from 'lit/directives/class-map.js';
+
+import '../components/loading-toast';
 
 @customElement('app-home')
 export class AppHome extends LitElement {
@@ -66,11 +68,18 @@ export class AppHome extends LitElement {
         display: flex;
         gap: 8px;
         flex-direction: column;
-        max-height: -webkit-fill-available;
+
+        max-height: 86vh;
+        overflow-y: auto;
+      }
+
+      ul::-webkit-scrollbar {
+        display: none;
       }
 
       li {
         margin-right: 50vw;
+        animation: quickUp 0.2s;
       }
 
       li.assistant {
@@ -126,6 +135,16 @@ export class AppHome extends LitElement {
         gap: 28px;
       }
 
+      @keyframes quickUp {
+        0% {
+          transform: translateY(0);
+        }
+
+        100% {
+          transform: translateY(-10px);
+        }
+      }
+
       @media(prefers-color-scheme: light) {
         fluent-text {
           background: white;
@@ -136,14 +155,6 @@ export class AppHome extends LitElement {
           background: white;
         }
       }
-
-      @media(max-width: 640px) {
-        main {
-          display: flex;
-          flex-direction: column-reverse;
-          gap: 10px;
-        }
-      }
   `];
 
   async firstUpdated() {
@@ -151,12 +162,12 @@ export class AppHome extends LitElement {
     // for more info check out the lit docs https://lit.dev/docs/components/lifecycle/
     console.log('This is your home page');
 
-    window.onload = async () => {
-      const { Init } = await import('../services/phi');
-      await Init(false);
 
-      this.loaded = true;
-    }
+    const { Init } = await import('../services/phi');
+    await Init(false);
+
+
+    this.loaded = true;
 
     //set up to listen for the enter button
     window.addEventListener("keydown", (e) => {
@@ -209,33 +220,27 @@ export class AppHome extends LitElement {
     this.query = query;
   }
 
-  private async copyTranscript() {
-
-  }
-
-  private async shareTranscript() {
-
-  }
-
-  private async downloadTranscript() {
-
-  }
-
   render() {
     return html`
       <app-header></app-header>
 
+      ${this.loaded === false ? html`<loading-toast></loading-toast>` : null}
+
       <main>
 
+        ${this.previousMessages && this.previousMessages.length > 0 ? html`
         <ul>
-          ${this.previousMessages.length > 0 ?
-            this.previousMessages.map((message) => html`
-              <li class=${classMap({assistant: message.type === "assistant"})}>
+          ${this.previousMessages.map((message) => html`
+              <li class=${classMap({ assistant: message.type === "assistant" })}>
                 <fluent-text>${message.content}</fluent-text>
               </li>
-            `) : null
-          }
-        </ul>
+            `)
+      }
+        </ul>` : html`
+          <div id="no-messages">
+            <fluent-text appearance="subtle">No messages yet</fluent-text>
+          </div>
+        `}
 
         <div id="toolbar">
           <fluent-text-input appearance="filled-lighter" @change="${($event: any) => this.handleInputChange($event.target.value)}" .value="${this.query || ""}" ?disabled=${this.loaded === false}>
