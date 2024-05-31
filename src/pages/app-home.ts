@@ -36,6 +36,10 @@ export class AppHome extends LitElement {
         justify-content: space-between;
       }
 
+      #no-messages {
+        margin-top: 14px;
+      }
+
       fluent-button svg {
         width: 11px;
         height: 11px;
