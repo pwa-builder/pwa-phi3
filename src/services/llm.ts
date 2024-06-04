@@ -1,10 +1,12 @@
+// @ts-ignore
 import * as ort from 'onnxruntime-web/webgpu';
 
 
 ort.env.wasm.numThreads = 1;
 ort.env.wasm.simd = true;
-ort.env.wasm.wasmPaths = document.location.pathname.replace('index.html', '') + 'public/';
 
+// todo: set this with env variable for easier dev / prod builds
+ort.env.wasm.wasmPaths = "/";
 
 //
 // load file from server or cache

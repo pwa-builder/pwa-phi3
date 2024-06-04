@@ -4,7 +4,6 @@ import { property, state, customElement } from 'lit/decorators.js';
 import '@fluentui/web-components/button.js';
 import '@fluentui/web-components/text-input.js';
 import '@fluentui/web-components/text.js';
-import '@fluentui/web-components/label.js';
 
 import { styles } from '../styles/shared-styles';
 
@@ -15,14 +14,14 @@ import '../components/loading-toast';
 @customElement('app-home')
 export class AppHome extends LitElement {
 
-  // For more information on using properties and state in lit
-  // check out this link https://lit.dev/docs/components/properties/
   @property() message = 'Welcome!';
 
   @state() previousMessages: any[] = [];
   @state() loaded: boolean = false;
 
   @state() query: string | undefined = undefined;
+
+  phiWorker: Worker | undefined;
 
   static styles = [
     styles,
@@ -54,6 +53,18 @@ export class AppHome extends LitElement {
         min-height: 40px;
         display: flex;
         align-items: center;
+      }
+
+      fluent-text p {
+        font-size: 16px;
+      }
+
+      li.assistant fluent-text {
+        background: #292929;
+      }
+
+      li fluent-text {
+        background: var(--colorBrandBackground);
       }
 
       fluent-text-input {
@@ -91,47 +102,6 @@ export class AppHome extends LitElement {
         margin-right: unset;
       }
 
-      #actions-menu {
-        display: flex;
-        gap: 8px;
-        flex-direction: row;
-        justify-content: space-between;
-
-        margin-bottom: 10px;
-      }
-
-      #main-action-block {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      #file-data-block {
-        display: flex;
-        gap: 4px;
-      }
-
-      #file-size {
-        color: grey;
-        font-size: 10px;
-      }
-
-      #file-name {
-        color: grey;
-        font-size: 12px;
-        font-weight: bold;
-
-        max-width: 169px;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow-x: hidden;
-      }
-
-      #file-data-block {
-        display: flex;
-        flex-direction: column;
-      }
-
       #toolbar {
         display: flex;
         align-items: center;
@@ -162,16 +132,20 @@ export class AppHome extends LitElement {
   `];
 
   async firstUpdated() {
-    // this method is a lifecycle even in lit
-    // for more info check out the lit docs https://lit.dev/docs/components/lifecycle/
-    console.log('This is your home page');
+    this.phiWorker = new Worker(
+      new URL('../services/phi.ts', import.meta.url),
+      { type: 'module' }
+    );
 
+    console.log("phiWorker", this.phiWorker)
+    this.phiWorker.onmessage = (event: any) => {
+      if (event.data.type === "loaded") {
+        this.loaded = true;
+      }
+    }
 
-    const { Init } = await import('../services/phi');
-    await Init(false);
+    this.phiWorker.postMessage({ type: "Init" });
 
-
-    this.loaded = true;
 
     //set up to listen for the enter button
     window.addEventListener("keydown", (e) => {
@@ -184,6 +158,8 @@ export class AppHome extends LitElement {
   }
 
   async sendMessage() {
+    const marked = await import('marked');
+
     this.previousMessages = [
       ...this.previousMessages,
       {
@@ -209,15 +185,25 @@ export class AppHome extends LitElement {
       }
     ];
 
-    const { Query } = await import('../services/phi');
-    await Query(false, origQuery, (message: string) => {
-      console.log("Message received: ", message);
-      completeMessage = message;
+    this.phiWorker!.onmessage = async (event: any) => {
+      if (event.data.type === "response") {
+        const message = event.data.response;
+        completeMessage = message;
 
-      // update last previous message.content
-      this.previousMessages[this.previousMessages.length - 1].content = completeMessage;
-      this.requestUpdate();
+        this.previousMessages[this.previousMessages.length - 1].content = await marked.parse(completeMessage);
+
+        this.previousMessages = this.previousMessages;
+
+        this.requestUpdate();
+      }
+    }
+
+    this.phiWorker!.postMessage({
+      type: "Query",
+      continuation: false,
+      prompt: origQuery
     });
+
   }
 
   handleInputChange(query: string) {
@@ -236,10 +222,10 @@ export class AppHome extends LitElement {
         <ul>
           ${this.previousMessages.map((message) => html`
               <li class=${classMap({ assistant: message.type === "assistant" })}>
-                <fluent-text>${message.content}</fluent-text>
+                <fluent-text .innerHTML="${message.content}"></fluent-text>
               </li>
             `)
-      }
+        }
         </ul>` : html`
           <div id="no-messages">
             <fluent-text appearance="subtle">No messages yet</fluent-text>
