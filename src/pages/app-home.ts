@@ -10,6 +10,7 @@ import { styles } from '../styles/shared-styles';
 import { classMap } from 'lit/directives/class-map.js';
 
 import '../components/loading-toast';
+import '../components/message-skeleton';
 
 @customElement('app-home')
 export class AppHome extends LitElement {
@@ -181,7 +182,7 @@ export class AppHome extends LitElement {
       ...this.previousMessages,
       {
         type: "assistant",
-        content: ""
+        content: "<message-skeleton></message-skeleton>"
       }
     ];
 
